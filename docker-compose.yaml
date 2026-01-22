@@ -220,7 +220,7 @@ services:
     image: redis:alpine
     restart: always
     volumes:
-      - './rootfs/db/redis/mailu:/data'
+      - './rootfs/data/db/redis/mailu:/data'
     depends_on:
       - resolver
     dns:
