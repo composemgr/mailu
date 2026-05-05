@@ -65,14 +65,14 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/certs` - Data storage
-- `./rootfs/data/nginx` - Data storage
-- `./rootfs/data/data` - Data storage
-- `./rootfs/data/dkim` - Data storage
-- `./rootfs/data/mail` - Data storage
-- `./rootfs/data/dovecot` - Data storage
-- `./rootfs/data/mailqueue` - Data storage
-- `./rootfs/data/postfix` - Data storage
+- `./volumes/data/certs` - Data storage
+- `./volumes/data/nginx` - Data storage
+- `./volumes/data/data` - Data storage
+- `./volumes/data/dkim` - Data storage
+- `./volumes/data/mail` - Data storage
+- `./volumes/data/dovecot` - Data storage
+- `./volumes/data/mailqueue` - Data storage
+- `./volumes/data/postfix` - Data storage
 
 ## 🔐 Security
 
