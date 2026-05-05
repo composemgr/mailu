@@ -45,8 +45,8 @@ services:
       - webmail
       - radicale
     volumes:
-      - './rootfs/data/certs:/certs'
-      - './rootfs/data/nginx:/overrides:ro'
+      - './volumes/data/certs:/certs'
+      - './volumes/data/nginx:/overrides:ro'
     depends_on:
       - resolver
     dns:
@@ -67,8 +67,8 @@ services:
     environment: *default-env
     logging: *default-logging
     volumes:
-      - './rootfs/data/data:/data'
-      - './rootfs/data/dkim:/dkim'
+      - './volumes/data/data:/data'
+      - './volumes/data/dkim:/dkim'
     depends_on:
       - redis
       - resolver
@@ -81,8 +81,8 @@ services:
     environment: *default-env
     logging: *default-logging
     volumes:
-      - './rootfs/data/mail:/mail'
-      - './rootfs/data/dovecot:/overrides:ro'
+      - './volumes/data/mail:/mail'
+      - './volumes/data/dovecot:/overrides:ro'
     networks:
       - default
       - fts_attachments
@@ -99,8 +99,8 @@ services:
     environment: *default-env
     logging: *default-logging
     volumes:
-      - './rootfs/data/mailqueue:/queue'
-      - './rootfs/data/postfix:/overrides:ro'
+      - './volumes/data/mailqueue:/queue'
+      - './volumes/data/postfix:/overrides:ro'
     depends_on:
       - front
       - resolver
@@ -150,8 +150,8 @@ services:
       - oletools
       - clamav
     volumes:
-      - './rootfs/data/rspamd:/overrides:ro'
-      - './rootfs/data/filter:/var/lib/rspamd'
+      - './volumes/data/rspamd:/overrides:ro'
+      - './volumes/data/filter:/var/lib/rspamd'
     depends_on:
       - front
       - redis
@@ -168,7 +168,7 @@ services:
     networks:
       - clamav
     volumes:
-      - './rootfs/data/filter/clamav:/var/lib/clamav'
+      - './volumes/data/filter/clamav:/var/lib/clamav'
     healthcheck:
       test:
         [
@@ -184,7 +184,7 @@ services:
     image: ghcr.io/mailu/radicale:latest
     restart: always
     volumes:
-      - './rootfs/data/dav:/data'
+      - './volumes/data/dav:/data'
     networks:
       - radicale
 
@@ -209,8 +209,8 @@ services:
     environment: *default-env
     logging: *default-logging
     volumes:
-      - './rootfs/data/webmail:/data'
-      - './rootfs/data/snappymail:/overrides:ro'
+      - './volumes/data/webmail:/data'
+      - './volumes/data/snappymail:/overrides:ro'
     networks:
       - webmail
     depends_on:
@@ -220,7 +220,7 @@ services:
     image: redis:alpine
     restart: always
     volumes:
-      - './rootfs/data/db/redis/mailu:/data'
+      - './volumes/data/db/redis/mailu:/data'
     depends_on:
       - resolver
     dns:
