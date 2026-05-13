@@ -14,7 +14,10 @@ x-env: &default-env
   DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
   HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
   POSTMASTER: ${APP_ADMIN_USER:-admin}
-  ADMIN_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
+  INITIAL_ADMIN_ACCOUNT: ${APP_ADMIN_USER:-admin}
+  INITIAL_ADMIN_DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+  INITIAL_ADMIN_PW: ${APP_ADMIN_PASS:-changeme_admin_password}
+  INITIAL_ADMIN_MODE: ifmissing
   WEB_ADMIN: /admin
   WEB_WEBMAIL: /webmail
   WEBMAIL: snappymail
@@ -37,7 +40,10 @@ services:
       DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
       HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
       POSTMASTER: ${APP_ADMIN_USER:-admin}
-      ADMIN_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
+      INITIAL_ADMIN_ACCOUNT: ${APP_ADMIN_USER:-admin}
+      INITIAL_ADMIN_DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      INITIAL_ADMIN_PW: ${APP_ADMIN_PASS:-changeme_admin_password}
+      INITIAL_ADMIN_MODE: ifmissing
       WEB_ADMIN: /admin
       WEB_WEBMAIL: /webmail
       WEBMAIL: snappymail
