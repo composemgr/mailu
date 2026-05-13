@@ -29,7 +29,20 @@ services:
     image: ghcr.io/mailu/nginx:latest
     pull_policy: always
     restart: always
-    environment: *default-env
+    environment:
+      TZ: ${TZ:-America/New_York}
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      SECRET_KEY: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
+      SUBNET: ${IPV4_NETWORK:-10.1.1.0/24}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${APP_ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
+      WEB_ADMIN: /admin
+      WEB_WEBMAIL: /webmail
+      WEBMAIL: snappymail
+      WEBDAV: radicale
+      WEBSITE: https://${BASE_HOST_NAME:-$HOSTNAME}
     logging: *default-logging
     ports:
       - '25:25'
@@ -45,6 +58,8 @@ services:
       - default
       - webmail
       - radicale
+      - proxy
+      - cloudflare
     volumes:
       - './volumes/data/certs:/certs'
       - './volumes/data/nginx:/overrides:ro'
@@ -52,6 +67,22 @@ services:
       - resolver
     dns:
       - 10.1.1.254
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://front:443'
+      - 'cloudflare.hostname=mailu.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.front.entrypoints=http'
+      - 'traefik.http.routers.front-secure.tls=true'
+      - 'traefik.http.routers.front.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.front-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.front.middlewares=front-https-redirect'
+      - 'traefik.http.routers.front-secure.entrypoints=https'
+      - 'traefik.http.routers.front-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.front-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.front-secure.service=front'
+      - 'traefik.http.services.front.loadbalancer.server.port=443'
 
   resolver:
     image: ghcr.io/mailu/unbound:latest
@@ -261,3 +292,7 @@ networks:
   fts_attachments:
     driver: bridge
     internal: true
+  proxy:
+    external: true
+  cloudflare:
+    external: true
