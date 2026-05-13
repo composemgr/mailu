@@ -9,9 +9,9 @@ x-logging: &default-logging
 
 x-env: &default-env
   TZ: ${TZ:-America/New_York}
-  SECRET_KEY: ${APP_SECRET_KEY:-changeme_secret_key}
+  SECRET_KEY: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
   SUBNET: ${IPV4_NETWORK:-10.1.1.0/24}
-  DOMAIN: ${BASE_DOMAIN_NAME:-${BASE_HOST_NAME}}
+  DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
   HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
   POSTMASTER: ${APP_ADMIN_USER:-admin}
   ADMIN_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
@@ -27,6 +27,7 @@ services:
   # Core services
   front:
     image: ghcr.io/mailu/nginx:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     logging: *default-logging
@@ -54,6 +55,7 @@ services:
 
   resolver:
     image: ghcr.io/mailu/unbound:latest
+    pull_policy: always
     environment: *default-env
     logging: *default-logging
     restart: always
@@ -63,6 +65,7 @@ services:
 
   admin:
     image: ghcr.io/mailu/admin:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     logging: *default-logging
@@ -77,6 +80,7 @@ services:
 
   imap:
     image: ghcr.io/mailu/dovecot:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     logging: *default-logging
@@ -95,6 +99,7 @@ services:
 
   smtp:
     image: ghcr.io/mailu/postfix:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     logging: *default-logging
@@ -109,6 +114,7 @@ services:
 
   oletools:
     image: ghcr.io/mailu/oletools:latest
+    pull_policy: always
     hostname: oletools
     restart: always
     networks:
@@ -119,7 +125,8 @@ services:
       - 10.1.1.254
 
   fts_attachments:
-    image: apache/tika:2.9.2.1-full
+    image: apache/tika:latest
+    pull_policy: always
     hostname: tika
     restart: always
     networks:
@@ -141,6 +148,7 @@ services:
 
   antispam:
     image: ghcr.io/mailu/rspamd:latest
+    pull_policy: always
     hostname: antispam
     restart: always
     environment: *default-env
@@ -163,7 +171,8 @@ services:
 
   # Optional services
   antivirus:
-    image: clamav/clamav-debian:1.2.3-45
+    image: clamav/clamav:latest
+    pull_policy: always
     restart: always
     networks:
       - clamav
@@ -182,6 +191,7 @@ services:
 
   webdav:
     image: ghcr.io/mailu/radicale:latest
+    pull_policy: always
     restart: always
     volumes:
       - './volumes/data/dav:/data'
@@ -190,10 +200,11 @@ services:
 
   fetchmail:
     image: ghcr.io/mailu/fetchmail:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     volumes:
-      - '/data/data/fetchmail:/data'
+      - './volumes/data/fetchmail:/data'
     depends_on:
       - admin
       - smtp
@@ -205,6 +216,7 @@ services:
   # Webmail
   webmail:
     image: ghcr.io/mailu/webmail:latest
+    pull_policy: always
     restart: always
     environment: *default-env
     logging: *default-logging
@@ -218,7 +230,9 @@ services:
 
   redis:
     image: redis:alpine
+    pull_policy: always
     restart: always
+    logging: *default-logging
     volumes:
       - './volumes/data/db/redis/mailu:/data'
     depends_on:
