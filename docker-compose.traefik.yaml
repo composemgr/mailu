@@ -1,0 +1,469 @@
+# nginx proxy address - http://172.17.0.1:64244
+name: mailu
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  app:
+    image: ghcr.io/mailu/nginx:latest
+    container_name: mailu-app
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      SUBNET: ${IPV4_NETWORK:-10.1.1.0/24}
+      SUBNET6: ${IPV6_NETWORK:-fdab:03bb:c928:beef::/64}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      TLS_FLAVOR: ${MAILU_TLS_FLAVOR:-cert}
+      AUTH_RATELIMIT_IP: ${MAILU_AUTH_RATELIMIT_IP:-120/hour}
+      AUTH_RATELIMIT_USER: ${MAILU_AUTH_RATELIMIT_USER:-5000/day}
+      DISABLE_STATISTICS: ${MAILU_DISABLE_STATISTICS:-True}
+      ADMIN: ${MAILU_ADMIN:-true}
+      API: ${MAILU_API:-true}
+      WEBMAIL: ${MAILU_WEBMAIL:-snappymail}
+      WEBDAV: ${MAILU_WEBDAV:-radicale}
+      ANTIVIRUS: ${MAILU_ANTIVIRUS:-clamav}
+      SCAN_MACROS: ${MAILU_SCAN_MACROS:-true}
+      MESSAGE_SIZE_LIMIT: ${MAILU_MESSAGE_SIZE_LIMIT:-50000000}
+      MESSAGE_RATELIMIT: ${MAILU_MESSAGE_RATELIMIT:-5000/day}
+      RECIPIENT_DELIMITER: ${MAILU_RECIPIENT_DELIMITER:+}
+      DMARC_RUA: ${MAILU_DMARC_RUA:-postmaster}
+      DMARC_RUF: ${MAILU_DMARC_RUF:-postmaster}
+      WELCOME: ${MAILU_WELCOME:-true}
+      WELCOME_SUBJECT: ${MAILU_WELCOME_SUBJECT:-Welcome to your new email account}
+      COMPRESSION: ${MAILU_COMPRESSION:-gz}
+      COMPRESSION_LEVEL: ${MAILU_COMPRESSION_LEVEL:-6}
+      FULL_TEXT_SEARCH: ${MAILU_FULL_TEXT_SEARCH:-en}
+      FULL_TEXT_SEARCH_ATTACHMENTS: ${MAILU_FULL_TEXT_SEARCH_ATTACHMENTS:-true}
+      WEBROOT_REDIRECT: ${MAILU_WEBROOT_REDIRECT:-/webmail}
+      WEB_ADMIN: /admin
+      WEB_WEBMAIL: /webmail
+      WEB_API: /api
+      SITENAME: ${APP_ORG_NAME:-Mailu}
+      WEBSITE: https://${BASE_HOST_NAME:-$HOSTNAME}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+      DEFAULT_SPAM_THRESHOLD: ${MAILU_DEFAULT_SPAM_THRESHOLD:-80}
+      CREDENTIAL_ROUNDS: ${MAILU_CREDENTIAL_ROUNDS:-12}
+      REAL_IP_HEADER: X-Real-IP
+      REJECT_UNLISTED_RECIPIENT: ${MAILU_REJECT_UNLISTED_RECIPIENT:-no}
+      INITIAL_ADMIN_ACCOUNT: ${APP_ADMIN_USER:-admin}
+      INITIAL_ADMIN_DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      INITIAL_ADMIN_PW: ${APP_ADMIN_PASS:-replace-with-a-random-password}
+      INITIAL_ADMIN_MODE: ifmissing
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=traefik'
+      - 'traefik.http.routers.mailu-app.entrypoints=http'
+      - 'traefik.http.routers.mailu-app.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.mailu-app.middlewares=mailu-app-https-redirect'
+      - 'traefik.http.middlewares.mailu-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.mailu-app-secure.entrypoints=https'
+      - 'traefik.http.routers.mailu-app-secure.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.mailu-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.mailu-app-secure.service=mailu-app'
+      - 'traefik.http.services.mailu-app.loadbalancer.server.port=443'
+    volumes:
+      - './volumes/data/mailu/certs:/certs:z'
+      - './volumes/config/mailu/nginx:/overrides:ro'
+    depends_on:
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+      - mailu-webmail
+      - mailu-webdav
+      - traefik
+
+  mailu-resolver:
+    image: ghcr.io/mailu/unbound:latest
+    container_name: mailu-resolver
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-resolver
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-resolver
+    networks:
+      mailu:
+        ipv4_address: 10.1.1.254
+
+  mailu-admin:
+    image: ghcr.io/mailu/admin:latest
+    container_name: mailu-admin
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-admin
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-admin
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      ADMIN: ${MAILU_ADMIN:-true}
+      API: ${MAILU_API:-true}
+      WEBMAIL: ${MAILU_WEBMAIL:-snappymail}
+      WEBDAV: ${MAILU_WEBDAV:-radicale}
+      ANTIVIRUS: ${MAILU_ANTIVIRUS:-clamav}
+      SCAN_MACROS: ${MAILU_SCAN_MACROS:-true}
+      MESSAGE_SIZE_LIMIT: ${MAILU_MESSAGE_SIZE_LIMIT:-50000000}
+      MESSAGE_RATELIMIT: ${MAILU_MESSAGE_RATELIMIT:-5000/day}
+      RECIPIENT_DELIMITER: ${MAILU_RECIPIENT_DELIMITER:+}
+      DMARC_RUA: ${MAILU_DMARC_RUA:-postmaster}
+      DMARC_RUF: ${MAILU_DMARC_RUF:-postmaster}
+      WELCOME: ${MAILU_WELCOME:-true}
+      WELCOME_SUBJECT: ${MAILU_WELCOME_SUBJECT:-Welcome to your new email account}
+      COMPRESSION: ${MAILU_COMPRESSION:-gz}
+      COMPRESSION_LEVEL: ${MAILU_COMPRESSION_LEVEL:-6}
+      FULL_TEXT_SEARCH: ${MAILU_FULL_TEXT_SEARCH:-en}
+      FULL_TEXT_SEARCH_ATTACHMENTS: ${MAILU_FULL_TEXT_SEARCH_ATTACHMENTS:-true}
+      DEFAULT_SPAM_THRESHOLD: ${MAILU_DEFAULT_SPAM_THRESHOLD:-80}
+      API_TOKEN: ${MAILU_API_TOKEN:-replace-with-a-random-api-token}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+      CREDENTIAL_ROUNDS: ${MAILU_CREDENTIAL_ROUNDS:-12}
+      REJECT_UNLISTED_RECIPIENT: ${MAILU_REJECT_UNLISTED_RECIPIENT:-no}
+    volumes:
+      - './volumes/db/sqlite/mailu:/data:z'
+      - './volumes/data/mailu/dkim:/dkim:z'
+    depends_on:
+      - mailu-redis
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+
+  mailu-imap:
+    image: ghcr.io/mailu/dovecot:latest
+    container_name: mailu-imap
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-imap
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-imap
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      ADMIN: ${MAILU_ADMIN:-true}
+      API: ${MAILU_API:-true}
+      WEBMAIL: ${MAILU_WEBMAIL:-snappymail}
+      WEBDAV: ${MAILU_WEBDAV:-radicale}
+      ANTIVIRUS: ${MAILU_ANTIVIRUS:-clamav}
+      SCAN_MACROS: ${MAILU_SCAN_MACROS:-true}
+      COMPRESSION: ${MAILU_COMPRESSION:-gz}
+      COMPRESSION_LEVEL: ${MAILU_COMPRESSION_LEVEL:-6}
+      FULL_TEXT_SEARCH: ${MAILU_FULL_TEXT_SEARCH:-en}
+      FULL_TEXT_SEARCH_ATTACHMENTS: ${MAILU_FULL_TEXT_SEARCH_ATTACHMENTS:-true}
+      AUTH_RATELIMIT_IP: ${MAILU_AUTH_RATELIMIT_IP:-120/hour}
+      AUTH_RATELIMIT_USER: ${MAILU_AUTH_RATELIMIT_USER:-5000/day}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    volumes:
+      - './volumes/data/mailu/mail:/mail:z'
+      - './volumes/config/mailu/dovecot:/overrides:ro'
+    depends_on:
+      - app
+      - mailu-fts-attachments
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+      - mailu-fts-attachments
+
+  mailu-smtp:
+    image: ghcr.io/mailu/postfix:latest
+    container_name: mailu-smtp
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-smtp
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-smtp
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      ADMIN: ${MAILU_ADMIN:-true}
+      API: ${MAILU_API:-true}
+      WEBMAIL: ${MAILU_WEBMAIL:-snappymail}
+      WEBDAV: ${MAILU_WEBDAV:-radicale}
+      ANTIVIRUS: ${MAILU_ANTIVIRUS:-clamav}
+      SCAN_MACROS: ${MAILU_SCAN_MACROS:-true}
+      MESSAGE_SIZE_LIMIT: ${MAILU_MESSAGE_SIZE_LIMIT:-50000000}
+      MESSAGE_RATELIMIT: ${MAILU_MESSAGE_RATELIMIT:-5000/day}
+      RECIPIENT_DELIMITER: ${MAILU_RECIPIENT_DELIMITER:+}
+      RELAYNETS: ${MAILU_RELAYNETS:-}
+      RELAYHOST: ${MAILU_RELAYHOST:-}
+      DMARC_RUA: ${MAILU_DMARC_RUA:-postmaster}
+      DMARC_RUF: ${MAILU_DMARC_RUF:-postmaster}
+      WELCOME: ${MAILU_WELCOME:-true}
+      WELCOME_SUBJECT: ${MAILU_WELCOME_SUBJECT:-Welcome to your new email account}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    volumes:
+      - './volumes/data/mailu/mailqueue:/queue:z'
+      - './volumes/config/mailu/postfix:/overrides:ro'
+    depends_on:
+      - app
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+
+  mailu-antispam:
+    image: ghcr.io/mailu/rspamd:latest
+    container_name: mailu-antispam
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-antispam
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-antispam
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      ANTIVIRUS: ${MAILU_ANTIVIRUS:-clamav}
+      SCAN_MACROS: ${MAILU_SCAN_MACROS:-true}
+      MESSAGE_SIZE_LIMIT: ${MAILU_MESSAGE_SIZE_LIMIT:-50000000}
+      MESSAGE_RATELIMIT: ${MAILU_MESSAGE_RATELIMIT:-5000/day}
+      DMARC_RUA: ${MAILU_DMARC_RUA:-postmaster}
+      DMARC_RUF: ${MAILU_DMARC_RUF:-postmaster}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    volumes:
+      - './volumes/config/mailu/rspamd:/overrides:ro'
+      - './volumes/data/mailu/filter:/var/lib/rspamd:z'
+    depends_on:
+      - app
+      - mailu-redis
+      - mailu-oletools
+      - mailu-antivirus
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+      - mailu-oletools
+      - mailu-antivirus
+
+  mailu-antivirus:
+    image: clamav/clamav:latest
+    container_name: mailu-antivirus
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-antivirus
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-antivirus
+    volumes:
+      - './volumes/data/mailu/filter/clamav:/var/lib/clamav:z'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'kill -0 `cat /tmp/clamd.pid` && kill -0 `cat /tmp/freshclam.pid`',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mailu-antivirus
+
+  mailu-oletools:
+    image: ghcr.io/mailu/oletools:latest
+    container_name: mailu-oletools
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-oletools
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-oletools
+    depends_on:
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu-oletools
+
+  mailu-fts-attachments:
+    image: apache/tika:latest
+    container_name: mailu-fts-attachments
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-fts-attachments
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-fts-attachments
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -nv -t1 -O /dev/null http://127.0.0.1:9998/tika || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mailu-fts-attachments
+
+  mailu-webdav:
+    image: ghcr.io/mailu/radicale:latest
+    container_name: mailu-webdav
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-webdav
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-webdav
+    volumes:
+      - './volumes/data/mailu/dav:/data:z'
+    networks:
+      - mailu-webdav
+
+  mailu-webmail:
+    image: ghcr.io/mailu/webmail:latest
+    container_name: mailu-webmail
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-webmail
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-webmail
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      WEBMAIL: ${MAILU_WEBMAIL:-snappymail}
+      WEB_ADMIN: /admin
+      WEB_WEBMAIL: /webmail
+      WEB_API: /api
+      WEBSITE: https://${BASE_HOST_NAME:-$HOSTNAME}
+      LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    volumes:
+      - './volumes/data/mailu/webmail:/data:z'
+      - './volumes/config/mailu/snappymail:/overrides:ro'
+    depends_on:
+      - app
+    networks:
+      - mailu-webmail
+
+  mailu-fetchmail:
+    image: ghcr.io/mailu/fetchmail:latest
+    container_name: mailu-fetchmail
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-fetchmail
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-fetchmail
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-16-byte-hex-string}
+      DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
+      HOSTNAMES: ${BASE_HOST_NAME:-$HOSTNAME}
+      POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
+      FETCHMAIL_ENABLED: ${MAILU_FETCHMAIL_ENABLED:-true}
+      FETCHMAIL_DELAY: ${MAILU_FETCHMAIL_DELAY:-600}
+    volumes:
+      - './volumes/data/mailu/fetchmail:/data:z'
+    depends_on:
+      - mailu-admin
+      - mailu-smtp
+      - mailu-imap
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+
+  mailu-redis:
+    image: redis:alpine
+    container_name: mailu-redis
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: mailu-redis
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: mailu-redis
+    volumes:
+      - './volumes/db/redis/mailu:/data:z'
+    depends_on:
+      - mailu-resolver
+    dns:
+      - 10.1.1.254
+    networks:
+      - mailu
+
+networks:
+  mailu:
+    name: mailu
+    external: false
+    enable_ipv6: true
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.1.0/24
+        - subnet: fdab:03bb:c928:beef::/64
+  mailu-webdav:
+    name: mailu-webdav
+    external: false
+    driver: bridge
+  mailu-webmail:
+    name: mailu-webmail
+    external: false
+    driver: bridge
+  mailu-antivirus:
+    name: mailu-antivirus
+    external: false
+    driver: bridge
+  mailu-oletools:
+    name: mailu-oletools
+    external: false
+    driver: bridge
+    internal: true
+  mailu-fts-attachments:
+    name: mailu-fts-attachments
+    external: false
+    driver: bridge
+    internal: true
+  traefik:
+    external: true
