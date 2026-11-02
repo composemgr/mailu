@@ -61,6 +61,15 @@ services:
       INITIAL_ADMIN_DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
       INITIAL_ADMIN_PW: ${APP_ADMIN_PASS:-replace-with-a-random-password}
       INITIAL_ADMIN_MODE: ifmissing
+    ports:
+      - '110:110'
+      - '143:143'
+      - '25:25'
+      - '4190:4190'
+      - '465:465'
+      - '587:587'
+      - '993:993'
+      - '995:995'
     labels:
       - 'traefik.enable=true'
       - 'traefik.docker.network=traefik'
