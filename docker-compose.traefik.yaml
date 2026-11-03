@@ -61,6 +61,12 @@ services:
       INITIAL_ADMIN_DOMAIN: ${BASE_DOMAIN_NAME:-example.com}
       INITIAL_ADMIN_PW: ${APP_ADMIN_PASS:-replace-with-a-random-password}
       INITIAL_ADMIN_MODE: ifmissing
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && curl -m3 -skfLo /dev/null http://127.0.0.1:10204/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '110:110'
       - '143:143'
@@ -106,6 +112,12 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: mailu-resolver
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && dig @127.0.0.1 +time=3 +tries=1 . NS | grep -q ''status: NOERROR''']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       mailu:
         ipv4_address: 10.1.1.254
@@ -147,6 +159,12 @@ services:
       LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
       CREDENTIAL_ROUNDS: ${MAILU_CREDENTIAL_ROUNDS:-12}
       REJECT_UNLISTED_RECIPIENT: ${MAILU_REJECT_UNLISTED_RECIPIENT:-no}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && curl -m3 -skfLo /dev/null http://localhost:8080/ping']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/db/sqlite/mailu:/data:z'
       - './volumes/data/mailu/dkim:/dkim:z'
@@ -186,6 +204,12 @@ services:
       AUTH_RATELIMIT_IP: ${MAILU_AUTH_RATELIMIT_IP:-120/hour}
       AUTH_RATELIMIT_USER: ${MAILU_AUTH_RATELIMIT_USER:-5000/day}
       LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/mailu/mail:/mail:z'
       - './volumes/config/mailu/dovecot:/overrides:ro'
@@ -230,6 +254,12 @@ services:
       WELCOME: ${MAILU_WELCOME:-true}
       WELCOME_SUBJECT: ${MAILU_WELCOME_SUBJECT:-Welcome to your new email account}
       LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/mailu/mailqueue:/queue:z'
       - './volumes/config/mailu/postfix:/overrides:ro'
@@ -263,6 +293,12 @@ services:
       DMARC_RUA: ${MAILU_DMARC_RUA:-postmaster}
       DMARC_RUF: ${MAILU_DMARC_RUF:-postmaster}
       LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && curl -m3 -skfLo /dev/null http://localhost:11334/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/config/mailu/rspamd:/overrides:ro'
       - './volumes/data/mailu/filter:/var/lib/rspamd:z'
@@ -316,6 +352,12 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: mailu-oletools
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && echo PING|nc -q1 127.0.0.1 11343|grep "PONG"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       - mailu-resolver
     dns:
@@ -358,6 +400,12 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: mailu-webdav
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/mailu/dav:/data:z'
     networks:
@@ -384,6 +432,12 @@ services:
       WEB_API: /api
       WEBSITE: https://${BASE_HOST_NAME:-$HOSTNAME}
       LOG_LEVEL: ${MAILU_LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck && curl -m3 -f -L http://localhost/ping']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/mailu/webmail:/data:z'
       - './volumes/config/mailu/snappymail:/overrides:ro'
@@ -409,6 +463,12 @@ services:
       POSTMASTER: ${MAILU_POSTMASTER:-postmaster}
       FETCHMAIL_ENABLED: ${MAILU_FETCHMAIL_ENABLED:-true}
       FETCHMAIL_DELAY: ${MAILU_FETCHMAIL_DELAY:-600}
+    healthcheck:
+      test: ['CMD-SHELL', '/usr/local/bin/supervisor-healthcheck']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/mailu/fetchmail:/data:z'
     depends_on:
@@ -432,6 +492,12 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: mailu-redis
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ping | grep -q PONG']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/db/redis/mailu:/data:z'
     depends_on:
